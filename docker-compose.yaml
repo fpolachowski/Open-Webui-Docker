@@ -1,0 +1,35 @@
+version: '3'
+
+volumes:
+  open-webui: {}
+  ollama: {}
+
+services:
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    environment:
+      - AIOHTTP_CLIENT_TIMEOUT=900
+    volumes:
+      - open-webui:/app/backend/data
+      # - ollama:/root/.ollama
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    depends_on:
+      - openwebui
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/certs:ro
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: openwebui nginx
+    depends_on:
+      - openwebui
